@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
