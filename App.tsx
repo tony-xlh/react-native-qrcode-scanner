@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { Dimensions, SafeAreaView, StyleSheet, Text } from 'react-native';
+import { View,Text, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 import * as REA from 'react-native-reanimated';
-import { Polygon, Rect, Svg } from 'react-native-svg';
+import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
 
 export default function App() {
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
+  const [buttonText, setButtonText] = React.useState(" Pause ");
+  const [isActive, setIsActive] = React.useState(true);
   const [frameWidth, setFrameWidth] = React.useState(720);
   const [frameHeight, setFrameHeight] = React.useState(1280);
   const devices = useCameraDevices();
@@ -27,6 +29,16 @@ export default function App() {
     REA.runOnJS(setFrameWidth)(frame.width);
     REA.runOnJS(setFrameHeight)(frame.height);
   }, [])
+
+  const onPress = () => {
+    if (buttonText==" Pause "){
+      setButtonText(" Resume ");
+      setIsActive(false);
+    }else{
+      setButtonText(" Pause ");
+      setIsActive(true);
+    }
+  };
 
   function getPointsData(lr:TextResult){
     var pointsData = lr.x1 + "," + lr.y1 + " ";
@@ -63,40 +75,63 @@ export default function App() {
             <Camera
             style={StyleSheet.absoluteFill}
             device={device}
-            isActive={true}
+            isActive={isActive}
             frameProcessor={frameProcessor}
             frameProcessorFps={5}
             />
-            {barcodeResults.map((barcode, idx) => (
-            <Text key={idx} style={styles.barcodeText}>
-                {barcode.barcodeFormat +": "+ barcode.barcodeText}
-            </Text>
-            ))}
         </>)}
         <Svg style={[StyleSheet.absoluteFill]} viewBox={getViewBox()}>
 
           {barcodeResults.map((barcode, idx) => (
-            <Polygon key={idx}
+            <Polygon key={"poly-"+idx}
             points={getPointsData(barcode)}
             fill="lime"
             stroke="green"
             opacity="0.5"
             strokeWidth="1"
-          />
+            />
           ))}
-          
+           {barcodeResults.map((barcode, idx) => (
+            <SVGText key={"text-"+idx}
+              fill="white"
+              stroke="purple"
+              fontSize="20"
+              fontWeight="bold"
+              x={barcode.x1}
+              y={barcode.y1}
+            >
+              {barcode.barcodeText}
+            </SVGText>
+          ))}
         </Svg>
+        <View style={styles.button}>
+          <TouchableOpacity onPress={onPress}>
+            <Text style={{fontSize: 16, color: "black"}}>{buttonText}</Text>
+          </TouchableOpacity>
+        </View>
+       
       </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex:1
+    flex:1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   barcodeText: {
     fontSize: 20,
     color: 'white',
     fontWeight: 'bold',
+  },
+  button: {
+    position: 'absolute',
+    justifyContent: 'center',
+    bottom: "10%",
+    borderColor:"black", 
+    borderWidth:2, 
+    borderRadius:5,
+    backgroundColor: "rgba(255,255,255,0.2)"
   },
 });
