@@ -7,6 +7,8 @@ import * as REA from 'react-native-reanimated';
 import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
 
+let pressedResult:TextResult|undefined;
+
 export default function BarcodeScanner({ route, navigation }) {
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
@@ -17,7 +19,6 @@ export default function BarcodeScanner({ route, navigation }) {
   const [frameHeight, setFrameHeight] = React.useState(1280);
   const devices = useCameraDevices();
   const device = devices.back;let actionSheetRef = React.useRef(null);
-  let pressedResult:TextResult|undefined;
   let scanned = false;
 
   React.useEffect(() => {
@@ -110,7 +111,7 @@ export default function BarcodeScanner({ route, navigation }) {
           title={'Select your action'}
           options={['View details', 'Open the link', 'Cancel']}
           cancelButtonIndex={2}
-          onPress={async (index) => { 
+          onPress={async (index) => {
             if (pressedResult){
               if (index == 0){
                 navigation.navigate("Info", {"barcode":pressedResult});
@@ -135,8 +136,9 @@ export default function BarcodeScanner({ route, navigation }) {
             stroke="green"
             opacity="0.5"
             strokeWidth="1"
-            onPressOut={() => {
-              console.log('pressed');
+            onPress={() => {
+              setButtonText(" Resume ");
+              setIsActive(false);
               pressedResult = barcode;
               actionSheetRef.current.show();
             }}
