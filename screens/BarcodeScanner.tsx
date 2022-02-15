@@ -148,7 +148,7 @@ export default function BarcodeScanner({ route, navigation }) {
             <SVGText key={"text-"+idx}
               fill="white"
               stroke="purple"
-              fontSize="20"
+              fontSize={frameWidth/400*20}
               fontWeight="bold"
               x={barcode.x1}
               y={barcode.y1}
