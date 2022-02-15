@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { Text, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform } from 'react-native';
+import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert } from 'react-native';
 import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 import * as REA from 'react-native-reanimated';
 
 import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
+import ActionSheet from '@alessiocancian/react-native-actionsheet';
 
 export default function BarcodeScanner({ route, navigation }) {
   const continuous = route.params.continuous;
@@ -15,7 +16,8 @@ export default function BarcodeScanner({ route, navigation }) {
   const [frameWidth, setFrameWidth] = React.useState(720);
   const [frameHeight, setFrameHeight] = React.useState(1280);
   const devices = useCameraDevices();
-  const device = devices.back;
+  const device = devices.back;let actionSheetRef = React.useRef(null);
+  let pressedResult:TextResult|undefined;
   let scanned = false;
 
   React.useEffect(() => {
@@ -103,6 +105,27 @@ export default function BarcodeScanner({ route, navigation }) {
             frameProcessorFps={5}
             />
         </>)}
+        <ActionSheet
+          ref={actionSheetRef}
+          title={'Select your action'}
+          options={['View details', 'Open the link', 'Cancel']}
+          cancelButtonIndex={2}
+          onPress={async (index) => { 
+            if (pressedResult){
+              if (index == 0){
+                navigation.navigate("Info", {"barcode":pressedResult});
+              } else if (index == 1) {
+                const url = pressedResult.barcodeText;
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                  await Linking.openURL(url);
+                } else {
+                  Alert.alert(`Don't know how to open this URL: ${url}`);
+                }
+              }
+            }
+          }}
+        />
         <Svg style={[StyleSheet.absoluteFill]} viewBox={getViewBox()}>
 
           {barcodeResults.map((barcode, idx) => (
@@ -114,7 +137,8 @@ export default function BarcodeScanner({ route, navigation }) {
             strokeWidth="1"
             onPressOut={() => {
               console.log('pressed');
-              navigation.navigate("Info", {"barcode":barcode});
+              pressedResult = barcode;
+              actionSheetRef.current.show();
             }}
             />
           ))}

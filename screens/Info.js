@@ -5,7 +5,8 @@ export default function Info({ route, navigation }) {
   const barcode = route.params.barcode;
   return (
     <SafeAreaView style={styles.container}>
-      <Text>{barcode.barcodeText}</Text>
+      <Text>{"Barcode Format: "+barcode.barcodeFormat}</Text>
+      <Text>{"Barcode Text: "+barcode.barcodeText}</Text>
     </SafeAreaView>
   );
 };
