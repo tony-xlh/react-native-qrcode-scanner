@@ -1,12 +1,13 @@
 import * as React from 'react';
-import { Text, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Button, GestureResponderEvent } from 'react-native';
+import { Text, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform } from 'react-native';
 import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 import * as REA from 'react-native-reanimated';
-import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
 
-export default function BarcodeScanner() {
+import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
+
+export default function BarcodeScanner({ route, navigation }) {
+  const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
   const [buttonText, setButtonText] = React.useState(" Pause ");
@@ -15,7 +16,27 @@ export default function BarcodeScanner() {
   const [frameHeight, setFrameHeight] = React.useState(1280);
   const devices = useCameraDevices();
   const device = devices.back;
-  const navigation = useNavigation();
+  let scanned = false;
+
+  React.useEffect(() => {
+    (async () => {
+      const status = await Camera.requestCameraPermission();
+      setHasPermission(status === 'authorized');
+    })();
+  }, []);
+
+  const onBarCodeDetected = (results:TextResult[]) => {
+    if (continuous == false && scanned== false){
+      console.log("Barcodes detected. Navigating");
+      setIsActive(false);
+      scanned = true;
+      navigation.navigate(
+        {
+          params: { results: results },
+          name: 'Home'
+        });
+    }
+  };
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
@@ -23,13 +44,15 @@ export default function BarcodeScanner() {
     //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
     
     const results:TextResult[] = decode(frame,config)
-    
+
     console.log("height: "+frame.height);
     console.log("width: "+frame.width);
-    
     REA.runOnJS(setBarcodeResults)(results);
     REA.runOnJS(setFrameWidth)(frame.width);
     REA.runOnJS(setFrameHeight)(frame.height);
+    if (results.length>0) {
+      REA.runOnJS(onBarCodeDetected)(results)
+    }
   }, [])
 
   const onPress = () => {
@@ -42,10 +65,6 @@ export default function BarcodeScanner() {
     }
   };
 
-  const barcodePressed = (tr:TextResult) => {
-    console.log("barcode pressed");
-  };
-
   function getPointsData(lr:TextResult){
     var pointsData = lr.x1 + "," + lr.y1 + " ";
     pointsData = pointsData+lr.x2 + "," + lr.y2 +" ";
@@ -56,23 +75,20 @@ export default function BarcodeScanner() {
 
   function getViewBox(){
     let viewBox = null;
-    if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
+    if (Platform.OS === 'android') {
+      if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
+        viewBox = "0 0 "+frameWidth+" "+frameHeight;
+      }else {
+        console.log("Has rotation");
+        viewBox = "0 0 "+frameHeight+" "+frameWidth;
+      }
+    } else {
       viewBox = "0 0 "+frameWidth+" "+frameHeight;
-    }else {
-      console.log("Has rotation");
-      viewBox = "0 0 "+frameHeight+" "+frameWidth;
-    }    
+    }
+
     console.log("viewBox"+viewBox);
     return viewBox;
   }
-
-  React.useEffect(() => {
-    (async () => {
-      const status = await Camera.requestCameraPermission();
-      setHasPermission(status === 'authorized');
-    })();
-  }, []);
-
 
   return (
       <SafeAreaView style={styles.container}>
