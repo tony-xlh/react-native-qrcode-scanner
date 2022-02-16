@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch } from 'react-native';
+import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch, BackHandler } from 'react-native';
 import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 import * as REA from 'react-native-reanimated';
@@ -31,6 +31,19 @@ export default function BarcodeScanner({ route, navigation }) {
       const status = await Camera.requestCameraPermission();
       setHasPermission(status === 'authorized');
     })();
+
+    const backAction = () => {
+      setIsActive(false);
+      navigation.navigate("Home");
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   const onBarCodeDetected = (results:TextResult[]) => {
