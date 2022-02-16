@@ -21,6 +21,7 @@ export default function BarcodeScanner({ route, navigation }) {
   const [frameWidth, setFrameWidth] = React.useState(1280);
   const [frameHeight, setFrameHeight] = React.useState(720);
   const [regionEnabled, setRegionEnabled] = React.useState(false);
+  const [torchEnabled, setTorchEnabled] = React.useState(false);
   const devices = useCameraDevices();
   const device = devices.back;let actionSheetRef = React.useRef(null);
   let scanned = false;
@@ -164,6 +165,7 @@ export default function BarcodeScanner({ route, navigation }) {
             style={StyleSheet.absoluteFill}
             device={device}
             isActive={isActive}
+            torch={torchEnabled ? "on" : "off"}
             frameProcessor={frameProcessor}
             frameProcessorFps={5}
             />
@@ -241,6 +243,17 @@ export default function BarcodeScanner({ route, navigation }) {
                   setRegionEnabled(newValue);
                 }}
                 value={regionEnabled}
+              />
+              <Text style={{alignSelf: "center", color: "black"}}>Torch</Text>
+              <Switch
+                style={{alignSelf: "center"}}
+                trackColor={{ false: "#767577", true: "black" }}
+                thumbColor={torchEnabled ? "white" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={(newValue) => {
+                  setTorchEnabled(newValue);
+                }}
+                value={torchEnabled}
               />
             </View>
             
