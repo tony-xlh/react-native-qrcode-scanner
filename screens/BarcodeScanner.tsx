@@ -6,7 +6,7 @@ import * as REA from 'react-native-reanimated';
 
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
-
+import Clipboard from '@react-native-clipboard/clipboard';
 
 let pressedResult:TextResult|undefined;
 
@@ -173,8 +173,8 @@ export default function BarcodeScanner({ route, navigation }) {
         <ActionSheet
           ref={actionSheetRef}
           title={'Select your action'}
-          options={['View details', 'Open the link', 'Cancel']}
-          cancelButtonIndex={2}
+          options={['View details', 'Open the link', 'Copy the text', 'Cancel']}
+          cancelButtonIndex={3}
           onPress={async (index) => {
             if (pressedResult){
               if (index == 0){
@@ -187,6 +187,8 @@ export default function BarcodeScanner({ route, navigation }) {
                 } else {
                   Alert.alert(`Don't know how to open this URL: ${url}`);
                 }
+              } else if (index == 2) {
+                Clipboard.setString(pressedResult.barcodeText);
               }
             }
           }}
