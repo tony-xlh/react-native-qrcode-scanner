@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { Alert, TouchableOpacity, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import CheckBox from '@react-native-community/checkbox';
+import { Switch, Alert, TouchableOpacity, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function Home({route, navigation}) {
-  const [toggleCheckBox, setToggleCheckBox] = React.useState(true)
+  const [continuousEnabled, setContinuousEnabled] = React.useState(true)
 
   React.useEffect(() => {
     if (route.params?.results) {
@@ -14,7 +13,7 @@ export default function Home({route, navigation}) {
   const onPressed = () => {
     navigation.navigate(
       {
-        params: { continuous: toggleCheckBox },
+        params: { continuous: continuousEnabled },
         name: 'BarcodeScanner'
       });
   }
@@ -27,14 +26,16 @@ export default function Home({route, navigation}) {
       >
         <Text style={styles.buttonText}>Scan Barcodes</Text>
       </TouchableOpacity>
-       <View style={styles.checkboxContainer}>
-        <CheckBox
-          style={styles.checkbox}
-          disabled={false}
-          value={toggleCheckBox}
-          onValueChange={(newValue) => setToggleCheckBox(newValue)}
-        />
+       <View style={styles.switchContainer}>
         <Text style={styles.label}>Continuous</Text>
+        <Switch
+          style={styles.switch}
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={continuousEnabled ? "white" : "#f4f3f4"}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={(newValue) => setContinuousEnabled(newValue)}
+          value={continuousEnabled}
+        />
        </View>
        
     </SafeAreaView>
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   container: {
     flex:1,
   },
-  checkboxContainer: {
+  switchContainer: {
     alignItems: 'flex-start',
     flexDirection: "row",
   },
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
   buttonText:{
     color: "#FFFFFF",
   },
-  checkbox: {
+  switch: {
     alignSelf: "center",
   },
   label: {
