@@ -16,7 +16,7 @@ export default function BarcodeScanner({ route, navigation }) {
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
-  const [buttonText, setButtonText] = React.useState(" Pause ");
+  const [buttonText, setButtonText] = React.useState("Pause");
   const [isActive, setIsActive] = React.useState(true);
   const [frameWidth, setFrameWidth] = React.useState(1280);
   const [frameHeight, setFrameHeight] = React.useState(720);
@@ -60,11 +60,11 @@ export default function BarcodeScanner({ route, navigation }) {
   };
 
   const toggleCameraStatus = () => {
-    if (buttonText==" Pause "){
-      setButtonText(" Resume ");
+    if (buttonText=="Pause"){
+      setButtonText("Resume");
       setIsActive(false);
     }else{
-      setButtonText(" Pause ");
+      setButtonText("Pause");
       setIsActive(true);
     }
   };
@@ -213,7 +213,7 @@ export default function BarcodeScanner({ route, navigation }) {
             y={0.2*getFrameSize()[1]}
             width={0.8*getFrameSize()[0]}
             height={0.45*getFrameSize()[1]}
-            strokeWidth="1"
+            strokeWidth="2"
             stroke="red"
           />}
           {barcodeResults.map((barcode, idx) => (
@@ -275,7 +275,7 @@ export default function BarcodeScanner({ route, navigation }) {
 
           </View>
           <TouchableOpacity onPress={toggleCameraStatus} style={styles.toggleCameraStatusButton}>
-            <Text style={{fontSize: 16, color: "black", alignSelf: "center"}}>{buttonText}</Text>
+            <Text style={{fontSize: 15, color: "black", alignSelf: "center"}}>{buttonText}</Text>
           </TouchableOpacity>
           
         </View>
@@ -302,12 +302,12 @@ const styles = StyleSheet.create({
     borderWidth:2, 
     borderRadius:5,
     padding: 8,
-    margin: 10,
+    margin: 5,
   },
   control:{
     flexDirection:"row",
     position: 'absolute',
-    top: "85%",
+    bottom: 0,
     height: "15%",
     width:"100%",
     alignSelf:"flex-start",
