@@ -1,22 +1,26 @@
 import * as React from 'react';
-import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert } from 'react-native';
+import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch } from 'react-native';
 import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 import * as REA from 'react-native-reanimated';
 
-import { Polygon, Text as SVGText, Svg } from 'react-native-svg';
+import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
+
 
 let pressedResult:TextResult|undefined;
 
 export default function BarcodeScanner({ route, navigation }) {
+  const rotated = REA.useSharedValue(false);
+  const regionEnabledShared = REA.useSharedValue(false);
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
   const [buttonText, setButtonText] = React.useState(" Pause ");
   const [isActive, setIsActive] = React.useState(true);
-  const [frameWidth, setFrameWidth] = React.useState(720);
-  const [frameHeight, setFrameHeight] = React.useState(1280);
+  const [frameWidth, setFrameWidth] = React.useState(1280);
+  const [frameHeight, setFrameHeight] = React.useState(720);
+  const [regionEnabled, setRegionEnabled] = React.useState(false);
   const devices = useCameraDevices();
   const device = devices.back;let actionSheetRef = React.useRef(null);
   let scanned = false;
@@ -41,24 +45,7 @@ export default function BarcodeScanner({ route, navigation }) {
     }
   };
 
-  const frameProcessor = useFrameProcessor((frame) => {
-    'worklet'
-    const config:DBRConfig = {};
-    //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
-    
-    const results:TextResult[] = decode(frame,config)
-
-    console.log("height: "+frame.height);
-    console.log("width: "+frame.width);
-    REA.runOnJS(setBarcodeResults)(results);
-    REA.runOnJS(setFrameWidth)(frame.width);
-    REA.runOnJS(setFrameHeight)(frame.height);
-    if (results.length>0) {
-      REA.runOnJS(onBarCodeDetected)(results)
-    }
-  }, [])
-
-  const onPress = () => {
+  const toggleCameraStatus = () => {
     if (buttonText==" Pause "){
       setButtonText(" Resume ");
       setIsActive(false);
@@ -80,26 +67,93 @@ export default function BarcodeScanner({ route, navigation }) {
     const frameSize = getFrameSize();
     const viewBox = "0 0 "+frameSize[0]+" "+frameSize[1];
     console.log("viewBox"+viewBox);
+    updateRotated();
     return viewBox;
   }
 
   const getFrameSize = ():number[] => {
     let width:number, height:number;
-    if (Platform.OS === 'android') {
-      if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
-        width = frameWidth;
-        height = frameHeight;
-      }else {
-        console.log("Has rotation");
-        width = frameHeight;
-        height = frameWidth;
-      }
-    } else {
+    if (HasRotation()){
+      width = frameHeight;
+      height = frameWidth;
+    }else {
       width = frameWidth;
       height = frameHeight;
     }
     return [width, height];
-  } 
+  }
+
+  const HasRotation = () => {
+    let value = false
+    if (Platform.OS === 'android') {
+      if (!(frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height)){
+        value = true;
+      }
+    }
+    return value;
+  }
+
+  const updateRotated = () => {
+    rotated.value = HasRotation();
+  }
+
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet'
+    console.log("height: "+frame.height);
+    console.log("width: "+frame.width);
+    REA.runOnJS(setFrameWidth)(frame.width);
+    REA.runOnJS(setFrameHeight)(frame.height);
+    REA.runOnJS(updateRotated);
+    const config:DBRConfig = {};
+    //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
+
+    if (regionEnabledShared.value){
+      let settings;
+      if (config.template){
+        settings = JSON.parse(config.template);
+      }else{
+        const template = 
+        `{
+          "ImageParameter": {
+            "Name": "Settings"
+          },
+          "Version": "3.0"
+        }`;
+        settings = JSON.parse(template);
+      }
+      settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
+      console.log("rotated: "+rotated.value);
+      if (rotated.value){
+        
+        settings["RegionDefinition"] = {
+                                        "Left": 20,
+                                        "Right": 65,
+                                        "Top": 10,
+                                        "Bottom": 90,
+                                        "MeasuredByPercentage": 1,
+                                        "Name": "Settings",
+                                      };
+      }else{
+        settings["RegionDefinition"] = {
+                                        "Left": 10,
+                                        "Right": 90,
+                                        "Top": 20,
+                                        "Bottom": 65,
+                                        "MeasuredByPercentage": 1,
+                                        "Name": "Settings",
+                                      };
+      }
+      
+      config.template = JSON.stringify(settings);
+    }
+    console.log(config.template);
+    const results:TextResult[] = decode(frame,config)
+
+    REA.runOnJS(setBarcodeResults)(results);
+    if (results.length>0) {
+      REA.runOnJS(onBarCodeDetected)(results)
+    }
+  }, [])
 
   return (
       <SafeAreaView style={styles.container}>
@@ -135,8 +189,16 @@ export default function BarcodeScanner({ route, navigation }) {
             }
           }}
         />
-        <Svg style={[StyleSheet.absoluteFill]} viewBox={getViewBox()}>
-
+        <Svg style={StyleSheet.absoluteFill} viewBox={getViewBox()}>
+          {regionEnabled &&
+          <Rect 
+            x={0.1*getFrameSize()[0]}
+            y={0.2*getFrameSize()[1]}
+            width={0.8*getFrameSize()[0]}
+            height={0.45*getFrameSize()[1]}
+            strokeWidth="1"
+            stroke="red"
+          />}
           {barcodeResults.map((barcode, idx) => (
             <Polygon key={"poly-"+idx}
             points={getPointsData(barcode)}
@@ -165,12 +227,31 @@ export default function BarcodeScanner({ route, navigation }) {
             </SVGText>
           ))}
         </Svg>
-        <View style={styles.button}>
-          <TouchableOpacity onPress={onPress}>
-            <Text style={{fontSize: 16, color: "black"}}>{buttonText}</Text>
+        <View style={styles.control}>
+          <View style={{flex:0.8}}>
+            <View style={styles.switchContainer}>
+              <Text style={{alignSelf: "center", color: "black"}}>Scan Region</Text>
+              <Switch
+                style={{alignSelf: "center"}}
+                trackColor={{ false: "#767577", true: "black" }}
+                thumbColor={regionEnabled ? "white" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={(newValue) => {
+                  regionEnabledShared.value = newValue;
+                  setRegionEnabled(newValue);
+                }}
+                value={regionEnabled}
+              />
+            </View>
+            
+
+          </View>
+          <TouchableOpacity onPress={toggleCameraStatus} style={styles.toggleCameraStatusButton}>
+            <Text style={{fontSize: 16, color: "black", alignSelf: "center"}}>{buttonText}</Text>
           </TouchableOpacity>
+          
         </View>
-       
+        
       </SafeAreaView>
   );
 }
@@ -186,13 +267,29 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  button: {
-    position: 'absolute',
+  toggleCameraStatusButton: {
+    flex: 0.2,
     justifyContent: 'center',
-    bottom: "10%",
     borderColor:"black", 
     borderWidth:2, 
     borderRadius:5,
-    backgroundColor: "rgba(255,255,255,0.2)"
+    padding: 8,
+    margin: 10,
+  },
+  control:{
+    flexDirection:"row",
+    position: 'absolute',
+    top: "85%",
+    height: "15%",
+    width:"100%",
+    alignSelf:"flex-start",
+    borderColor: "white",
+    borderWidth: 0.1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: 'center',
+  },
+  switchContainer: {
+    alignItems: 'flex-start',
+    flexDirection: "row",
   },
 });
