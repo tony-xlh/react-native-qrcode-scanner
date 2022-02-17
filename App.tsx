@@ -2,9 +2,9 @@ import * as React from 'react';
 import {StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import BarcodeScanner from './screens/BarcodeScanner';
-import Home from './screens/Home';
-import Info from './screens/Info';
+import BarcodeScanner from './Screens/BarcodeScanner';
+import Home from './Screens/Home';
+import Info from './Screens/Info';
 
 const Root = createNativeStackNavigator()
 
