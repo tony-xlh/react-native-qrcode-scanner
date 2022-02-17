@@ -1,8 +1,23 @@
 import * as React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, BackHandler } from 'react-native';
 
 export default function Info({ route, navigation }) {
   const barcode = route.params.barcode;
+  React.useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
+
   return (
     <SafeAreaView style={styles.container}>
       <Text>{"Barcode Format: "+barcode.barcodeFormat}</Text>

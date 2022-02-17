@@ -11,6 +11,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 let pressedResult:TextResult|undefined;
 
 export default function BarcodeScanner({ route, navigation }) {
+  const mounted = REA.useSharedValue(true);
   const rotated = REA.useSharedValue(false);
   const regionEnabledShared = REA.useSharedValue(false);
   const continuous = route.params.continuous;
@@ -34,7 +35,7 @@ export default function BarcodeScanner({ route, navigation }) {
 
     const backAction = () => {
       setIsActive(false);
-      navigation.navigate("Home");
+      navigation.goBack();
       return true;
     };
 
@@ -45,6 +46,11 @@ export default function BarcodeScanner({ route, navigation }) {
 
     return () => backHandler.remove();
   }, []);
+
+  React.useEffect(()=>{
+    mounted.value = true; // to avoid the error: Can’t perform a React state update on an unmounted component.
+    return () => { mounted.value = false };
+  });
 
   const onBarCodeDetected = (results:TextResult[]) => {
     if (continuous == false && scanned== false){
@@ -111,12 +117,27 @@ export default function BarcodeScanner({ route, navigation }) {
     rotated.value = HasRotation();
   }
 
+  const updateFrameSize = (width:number, height:number) => {
+    if (mounted.value) {
+      setFrameWidth(width);
+      setFrameHeight(height);
+    }
+  }
+
+  const onBarcodeScanned = (results:TextResult[]) =>{
+    if (mounted.value) {
+      setBarcodeResults(results);
+      if (results.length>0) {
+        onBarCodeDetected(results);
+      }
+    }
+  }
+
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
     console.log("height: "+frame.height);
     console.log("width: "+frame.width);
-    REA.runOnJS(setFrameWidth)(frame.width);
-    REA.runOnJS(setFrameHeight)(frame.height);
+    REA.runOnJS(updateFrameSize)(frame.width, frame.height);
     REA.runOnJS(updateRotated);
     const config:DBRConfig = {};
     //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
@@ -160,13 +181,9 @@ export default function BarcodeScanner({ route, navigation }) {
       
       config.template = JSON.stringify(settings);
     }
-    console.log(config.template);
-    const results:TextResult[] = decode(frame,config)
 
-    REA.runOnJS(setBarcodeResults)(results);
-    if (results.length>0) {
-      REA.runOnJS(onBarCodeDetected)(results)
-    }
+    const results:TextResult[] = decode(frame,config)
+    REA.runOnJS(onBarcodeScanned)(results);
   }, [])
 
   return (
@@ -224,7 +241,7 @@ export default function BarcodeScanner({ route, navigation }) {
             opacity="0.5"
             strokeWidth="1"
             onPress={() => {
-              setButtonText(" Resume ");
+              setButtonText("Resume");
               setIsActive(false);
               pressedResult = barcode;
               actionSheetRef.current.show();
