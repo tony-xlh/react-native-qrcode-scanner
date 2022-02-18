@@ -7,6 +7,7 @@ import * as REA from 'react-native-reanimated';
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
 import Clipboard from '@react-native-clipboard/clipboard';
+import {getRotation, Surface} from 'react-native-rotation-info'
 
 let pressedResult:TextResult|undefined;
 
@@ -14,6 +15,7 @@ export default function BarcodeScanner({ route, navigation }) {
   const mounted = REA.useSharedValue(true);
   const rotated = REA.useSharedValue(false);
   const regionEnabledShared = REA.useSharedValue(false);
+  const rotation = REA.useSharedValue(0);
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
@@ -133,12 +135,21 @@ export default function BarcodeScanner({ route, navigation }) {
     }
   }
 
+  const updateRotation = () => {
+    if (Platform.OS === "android") {
+      getRotation().then(function(r) {
+          rotation.value = r;
+        }
+      );
+    }
+  }
+  
+
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
     console.log("height: "+frame.height);
     console.log("width: "+frame.width);
     REA.runOnJS(updateFrameSize)(frame.width, frame.height);
-    REA.runOnJS(updateRotated);
     const config:DBRConfig = {};
     //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
 
@@ -177,6 +188,14 @@ export default function BarcodeScanner({ route, navigation }) {
                                         "MeasuredByPercentage": 1,
                                         "Name": "Settings",
                                       };
+        if (Platform.OS == "android") {
+            REA.runOnJS(updateRotation)();
+            if (rotation.value == Surface.ROTATION_270){
+              settings["RegionDefinition"]["Top"] = 35; // 100 - 65
+              settings["RegionDefinition"]["Bottom"] = 80; // 100 - 20
+              console.log(settings["RegionDefinition"]);
+            }
+        }
       }
       
       config.template = JSON.stringify(settings);
