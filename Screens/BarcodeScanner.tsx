@@ -7,7 +7,6 @@ import * as REA from 'react-native-reanimated';
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
 import Clipboard from '@react-native-clipboard/clipboard';
-import {getRotation, Surface} from 'react-native-rotation-info'
 
 let pressedResult:TextResult|undefined;
 
@@ -15,7 +14,6 @@ export default function BarcodeScanner({ route, navigation }) {
   const mounted = REA.useSharedValue(true);
   const rotated = REA.useSharedValue(false);
   const regionEnabledShared = REA.useSharedValue(false);
-  const rotation = REA.useSharedValue(0);
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
@@ -141,15 +139,6 @@ export default function BarcodeScanner({ route, navigation }) {
     }
   }
 
-  const updateRotation = () => {
-    if (Platform.OS === "android") {
-      getRotation().then(function(r) {
-          rotation.value = r;
-        }
-      );
-    }
-  }
-
   const format = React.useMemo(() => {
     const desiredWidth = 1280;
     const desiredHeight = 720;
@@ -196,36 +185,14 @@ export default function BarcodeScanner({ route, navigation }) {
         settings = JSON.parse(template);
       }
       settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
-      console.log("rotated: "+rotated.value);
-      if (rotated.value){
-        
-        settings["RegionDefinition"] = {
-                                        "Left": 20,
-                                        "Right": 65,
-                                        "Top": 10,
-                                        "Bottom": 90,
-                                        "MeasuredByPercentage": 1,
-                                        "Name": "Settings",
-                                      };
-      }else{
-        settings["RegionDefinition"] = {
-                                        "Left": 10,
-                                        "Right": 90,
-                                        "Top": 20,
-                                        "Bottom": 65,
-                                        "MeasuredByPercentage": 1,
-                                        "Name": "Settings",
-                                      };
-        if (Platform.OS == "android") {
-            REA.runOnJS(updateRotation)();
-            if (rotation.value == Surface.ROTATION_270){
-              settings["RegionDefinition"]["Top"] = 35; // 100 - 65
-              settings["RegionDefinition"]["Bottom"] = 80; // 100 - 20
-              console.log(settings["RegionDefinition"]);
-            }
-        }
-      }
-      
+      settings["RegionDefinition"] = {
+                                      "Left": 10,
+                                      "Right": 90,
+                                      "Top": 20,
+                                      "Bottom": 65,
+                                      "MeasuredByPercentage": 1,
+                                      "Name": "Settings",
+                                    };
       config.template = JSON.stringify(settings);
     }
 
