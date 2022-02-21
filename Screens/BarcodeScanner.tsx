@@ -25,8 +25,14 @@ export default function BarcodeScanner({ route, navigation }) {
   const [frameHeight, setFrameHeight] = React.useState(720);
   const [regionEnabled, setRegionEnabled] = React.useState(false);
   const [torchEnabled, setTorchEnabled] = React.useState(false);
+  const [useFront, setUseFront] = React.useState(false);
+  const useFrontShared = REA.useSharedValue(false);
+
   const devices = useCameraDevices();
-  const device = devices.back;let actionSheetRef = React.useRef(null);
+  const frontCam = devices.front;
+  const backCam = devices.back;
+
+  let actionSheetRef = React.useRef(null);
   let scanned = false;
 
   React.useEffect(() => {
@@ -143,7 +149,29 @@ export default function BarcodeScanner({ route, navigation }) {
       );
     }
   }
-  
+
+  const format = React.useMemo(() => {
+    const desiredWidth = 1280;
+    const desiredHeight = 720;
+    let selectedCam;
+    if (useFront){
+      selectedCam = frontCam;
+    }else{
+      selectedCam = backCam;
+    }
+    if (selectedCam){
+      for (let index = 0; index < selectedCam.formats.length; index++) {
+        const format = selectedCam.formats[index];
+        console.log("h: "+format.videoHeight);
+        console.log("w: "+format.videoWidth);
+        if (format.videoWidth == desiredWidth && format.videoHeight == desiredHeight){
+          console.log("select format: "+format);
+          return format;
+        }
+      };
+    }
+    return undefined;
+  }, [useFront])
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
@@ -152,7 +180,7 @@ export default function BarcodeScanner({ route, navigation }) {
     REA.runOnJS(updateFrameSize)(frame.width, frame.height);
     const config:DBRConfig = {};
     //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
-
+    config.isFront=useFrontShared.value;
     if (regionEnabledShared.value){
       let settings;
       if (config.template){
@@ -204,16 +232,17 @@ export default function BarcodeScanner({ route, navigation }) {
     const results:TextResult[] = decode(frame,config)
     REA.runOnJS(onBarcodeScanned)(results);
   }, [])
-
+  
   return (
       <SafeAreaView style={styles.container}>
-        {device != null &&
+        { backCam != null &&
         hasPermission && (
         <>
             <Camera
             style={StyleSheet.absoluteFill}
-            device={device}
+            device={useFront ? frontCam : backCam}
             isActive={isActive}
+            format={format}
             torch={torchEnabled ? "on" : "off"}
             frameProcessor={frameProcessor}
             frameProcessorFps={5}
@@ -294,6 +323,20 @@ export default function BarcodeScanner({ route, navigation }) {
                   setRegionEnabled(newValue);
                 }}
                 value={regionEnabled}
+              />
+            </View>
+            <View style={styles.switchContainer}>
+              <Text style={{alignSelf: "center", color: "black"}}>Front</Text>
+              <Switch
+                style={{alignSelf: "center"}}
+                trackColor={{ false: "#767577", true: "black" }}
+                thumbColor={useFront ? "white" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={(newValue) => {
+                  useFrontShared.value=newValue;
+                  setUseFront(newValue);
+                }}
+                value={useFront}
               />
               <Text style={{alignSelf: "center", color: "black"}}>Torch</Text>
               <Switch
