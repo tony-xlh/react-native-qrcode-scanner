@@ -238,7 +238,9 @@ export default function BarcodeScanner({ route, navigation }) {
             }
           }}
         />
-        <Svg style={StyleSheet.absoluteFill} viewBox={getViewBox()}>
+        <Svg style={StyleSheet.absoluteFill} 
+          preserveAspectRatio="xMidYMid slice"
+          viewBox={getViewBox()}>
           {regionEnabled &&
           <Rect 
             x={0.1*getFrameSize()[0]}
