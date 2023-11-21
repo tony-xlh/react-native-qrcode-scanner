@@ -23,23 +23,10 @@ export default function BarcodeScanner({ route, navigation }) {
   const [torchEnabled, setTorchEnabled] = React.useState(false);
   
   const backCam = useCameraDevice('back');
-  const frontCam = useCameraDevice('front');
-  
-  const getDesiredCameraFormat = (isFront:boolean) => {
-    if (frontCam && backCam) {
-      let desiredCam = isFront?frontCam:backCam;
-      let format = getCameraFormat(desiredCam, [
-        { videoResolution: { width: 1280, height: 720 } },
-        { fps: 60 }
-      ])
-      console.log(desiredCam);
-      return format;
-    }
-    return undefined;
-  }
+
   let scanned = false;
   const actionSheetRef = React.useRef<null|ActionSheet>(null);
-  const cameraFormat = useCameraFormat(frontCam, [
+  const cameraFormat = useCameraFormat(backCam, [
     { videoResolution: { width: 1280, height: 720 } },
     { fps: 60 }
   ])
