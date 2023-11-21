@@ -1,19 +1,17 @@
 import * as React from 'react';
 import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch, BackHandler } from 'react-native';
-import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
+import { Camera, CameraDevice, getCameraFormat, useCameraDevice, useCameraDevices, useCameraFormat, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
-import * as REA from 'react-native-reanimated';
 
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useSharedValue, Worklets } from 'react-native-worklets-core';
 
 let pressedResult:TextResult|undefined;
 
 export default function BarcodeScanner({ route, navigation }) {
-  const mounted = REA.useSharedValue(true);
-  const rotated = REA.useSharedValue(false);
-  const regionEnabledShared = REA.useSharedValue(false);
+  const regionEnabledShared = useSharedValue(false);
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
   const [barcodeResults, setBarcodeResults] = React.useState([] as TextResult[]);
@@ -23,20 +21,33 @@ export default function BarcodeScanner({ route, navigation }) {
   const [frameHeight, setFrameHeight] = React.useState(720);
   const [regionEnabled, setRegionEnabled] = React.useState(false);
   const [torchEnabled, setTorchEnabled] = React.useState(false);
-  const [useFront, setUseFront] = React.useState(false);
-  const useFrontShared = REA.useSharedValue(false);
-
-  const devices = useCameraDevices();
-  const frontCam = devices.front;
-  const backCam = devices.back;
-
-  let actionSheetRef = React.useRef(null);
+  
+  const backCam = useCameraDevice('back');
+  const frontCam = useCameraDevice('front');
+  
+  const getDesiredCameraFormat = (isFront:boolean) => {
+    if (frontCam && backCam) {
+      let desiredCam = isFront?frontCam:backCam;
+      let format = getCameraFormat(desiredCam, [
+        { videoResolution: { width: 1280, height: 720 } },
+        { fps: 60 }
+      ])
+      console.log(desiredCam);
+      return format;
+    }
+    return undefined;
+  }
   let scanned = false;
+  const actionSheetRef = React.useRef<null|ActionSheet>(null);
+  const cameraFormat = useCameraFormat(frontCam, [
+    { videoResolution: { width: 1280, height: 720 } },
+    { fps: 60 }
+  ])
 
   React.useEffect(() => {
     (async () => {
       const status = await Camera.requestCameraPermission();
-      setHasPermission(status === 'authorized');
+      setHasPermission(status === 'granted');
     })();
 
     const backAction = () => {
@@ -53,10 +64,6 @@ export default function BarcodeScanner({ route, navigation }) {
     return () => backHandler.remove();
   }, []);
 
-  React.useEffect(()=>{
-    mounted.value = true; // to avoid the error: Can’t perform a React state update on an unmounted component.
-    return () => { mounted.value = false };
-  });
 
   const onBarCodeDetected = (results:TextResult[]) => {
     if (continuous == false && scanned== false){
@@ -93,87 +100,55 @@ export default function BarcodeScanner({ route, navigation }) {
     const frameSize = getFrameSize();
     const viewBox = "0 0 "+frameSize[0]+" "+frameSize[1];
     console.log("viewBox"+viewBox);
-    updateRotated();
     return viewBox;
   }
 
-  const getFrameSize = ():number[] => {
-    let width:number, height:number;
-    if (HasRotation()){
-      width = frameHeight;
-      height = frameWidth;
-    }else {
+  const getFrameSize = () => {
+    let width, height;
+    if (Platform.OS === 'android') {
+      if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
+        width = frameWidth;
+        height = frameHeight;
+      }else {
+        console.log("Has rotation");
+        width = frameHeight;
+        height = frameWidth;
+      }
+    } else {
       width = frameWidth;
       height = frameHeight;
     }
     return [width, height];
   }
 
-  const HasRotation = () => {
-    let value = false
-    if (Platform.OS === 'android') {
-      if (!(frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height)){
-        value = true;
-      }
-    }
-    return value;
-  }
-
-  const updateRotated = () => {
-    rotated.value = HasRotation();
-  }
-
   const updateFrameSize = (width:number, height:number) => {
-    if (mounted.value) {
-      setFrameWidth(width);
-      setFrameHeight(height);
-    }
+    setFrameWidth(width);
+    setFrameHeight(height);
   }
 
+  const updateFrameSizeJS = Worklets.createRunInJsFn(updateFrameSize);
   const onBarcodeScanned = (results:TextResult[]) =>{
-    if (mounted.value) {
-      setBarcodeResults(results);
-      if (results.length>0) {
-        onBarCodeDetected(results);
-      }
+    console.log("onBarcodeScanned");
+    setBarcodeResults(results);
+    if (results.length>0) {
+      onBarCodeDetected(results);
     }
   }
-
-  const format = React.useMemo(() => {
-    const desiredWidth = 1280;
-    const desiredHeight = 720;
-    let selectedCam;
-    if (useFront){
-      selectedCam = frontCam;
-    }else{
-      selectedCam = backCam;
-    }
-    if (selectedCam){
-      for (let index = 0; index < selectedCam.formats.length; index++) {
-        const format = selectedCam.formats[index];
-        console.log("h: "+format.videoHeight);
-        console.log("w: "+format.videoWidth);
-        if (format.videoWidth == desiredWidth && format.videoHeight == desiredHeight){
-          console.log("select format: "+format);
-          return format;
-        }
-      };
-    }
-    return undefined;
-  }, [useFront])
+  const onBarcodeScannedJS = Worklets.createRunInJsFn(onBarcodeScanned);
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
     console.log("height: "+frame.height);
     console.log("width: "+frame.width);
-    REA.runOnJS(updateFrameSize)(frame.width, frame.height);
+    updateFrameSizeJS(frame.width, frame.height);
     const config:DBRConfig = {};
-    //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
-    config.isFront=useFrontShared.value;
+    config.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+    config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
+
     if (regionEnabledShared.value){
       let settings;
       if (config.template){
-        settings = JSON.parse(config.template);
+        settings = JSON.parse(config.template!);
       }else{
         const template = 
         `{
@@ -196,23 +171,25 @@ export default function BarcodeScanner({ route, navigation }) {
       config.template = JSON.stringify(settings);
     }
 
-    const results:TextResult[] = decode(frame,config)
-    REA.runOnJS(onBarcodeScanned)(results);
+    const results = decode(frame,config)
+    if (results) {
+      onBarcodeScannedJS(results);
+    }
   }, [])
   
   return (
       <SafeAreaView style={styles.container}>
-        { backCam != null &&
+        {backCam &&
         hasPermission && (
         <>
             <Camera
+            device={backCam}
             style={StyleSheet.absoluteFill}
-            device={useFront ? frontCam : backCam}
             isActive={isActive}
-            format={format}
             torch={torchEnabled ? "on" : "off"}
+            format={cameraFormat}
+            pixelFormat="yuv"
             frameProcessor={frameProcessor}
-            frameProcessorFps={5}
             />
         </>)}
         <ActionSheet
@@ -239,7 +216,6 @@ export default function BarcodeScanner({ route, navigation }) {
           }}
         />
         <Svg style={StyleSheet.absoluteFill} 
-          preserveAspectRatio="xMidYMid slice"
           viewBox={getViewBox()}>
           {regionEnabled &&
           <Rect 
@@ -249,6 +225,7 @@ export default function BarcodeScanner({ route, navigation }) {
             height={0.45*getFrameSize()[1]}
             strokeWidth="2"
             stroke="red"
+            fillOpacity={0.0}
           />}
           {barcodeResults.map((barcode, idx) => (
             <Polygon key={"poly-"+idx}
@@ -261,7 +238,9 @@ export default function BarcodeScanner({ route, navigation }) {
               setButtonText("Resume");
               setIsActive(false);
               pressedResult = barcode;
-              actionSheetRef.current.show();
+              if (actionSheetRef.current) {
+                actionSheetRef.current.show();
+              }
             }}
             />
           ))}
@@ -295,18 +274,6 @@ export default function BarcodeScanner({ route, navigation }) {
               />
             </View>
             <View style={styles.switchContainer}>
-              <Text style={{alignSelf: "center", color: "black"}}>Front</Text>
-              <Switch
-                style={{alignSelf: "center"}}
-                trackColor={{ false: "#767577", true: "black" }}
-                thumbColor={useFront ? "white" : "#f4f3f4"}
-                ios_backgroundColor="#3e3e3e"
-                onValueChange={(newValue) => {
-                  useFrontShared.value=newValue;
-                  setUseFront(newValue);
-                }}
-                value={useFront}
-              />
               <Text style={{alignSelf: "center", color: "black"}}>Torch</Text>
               <Switch
                 style={{alignSelf: "center"}}
@@ -319,8 +286,6 @@ export default function BarcodeScanner({ route, navigation }) {
                 value={torchEnabled}
               />
             </View>
-            
-
           </View>
           <TouchableOpacity onPress={toggleCameraStatus} style={styles.toggleCameraStatusButton}>
             <Text style={{fontSize: 15, color: "black", alignSelf: "center"}}>{buttonText}</Text>
