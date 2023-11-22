@@ -171,12 +171,6 @@ export default function BarcodeScanner({ route, navigation }) {
                                         "MeasuredByPercentage": 1,
                                         "Name": "Settings",
                                       };
-        //settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
-        //  {
-        //    "Name":"Barcode",
-        //    "BarcodeFormatIds":"BF_QR_CODE"
-        //  }
-        //]
         config.template = JSON.stringify(settings);
       }
       const results = decode(frame,config)
