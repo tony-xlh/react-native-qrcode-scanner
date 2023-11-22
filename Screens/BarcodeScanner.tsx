@@ -151,21 +151,32 @@ export default function BarcodeScanner({ route, navigation }) {
           }`;
           settings = JSON.parse(template);
         }
+        let left = 10;
+        let right = 90;
+        let top = 20;
+        let bottom = 65;
+        if (config.rotateImage == false && Platform.OS === 'android') {
+          console.log("android with rotation disabled");
+          left = 20;
+          right = 65;
+          top = 10;
+          bottom = 90;
+        }
         settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
         settings["RegionDefinition"] = {
-                                        "Left": 10,
-                                        "Right": 90,
-                                        "Top": 20,
-                                        "Bottom": 65,
+                                        "Left": left,
+                                        "Right": right,
+                                        "Top": top,
+                                        "Bottom": bottom,
                                         "MeasuredByPercentage": 1,
                                         "Name": "Settings",
                                       };
-        settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
-          {
-            "Name":"Barcode",
-            "BarcodeFormatIds":"BF_QR_CODE"
-          }
-        ]
+        //settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
+        //  {
+        //    "Name":"Barcode",
+        //    "BarcodeFormatIds":"BF_QR_CODE"
+        //  }
+        //]
         config.template = JSON.stringify(settings);
       }
       const results = decode(frame,config)
