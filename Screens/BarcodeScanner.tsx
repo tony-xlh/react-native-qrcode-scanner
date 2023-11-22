@@ -135,7 +135,7 @@ export default function BarcodeScanner({ route, navigation }) {
     if (regionEnabledShared.value){
       let settings;
       if (config.template){
-        settings = JSON.parse(config.template!);
+        settings = JSON.parse(config.template);
       }else{
         const template = 
         `{
@@ -155,9 +155,14 @@ export default function BarcodeScanner({ route, navigation }) {
                                       "MeasuredByPercentage": 1,
                                       "Name": "Settings",
                                     };
+      settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
+        {
+          "Name":"Barcode",
+          "BarcodeFormatIds":"BF_QR_CODE"
+        }
+      ]
       config.template = JSON.stringify(settings);
     }
-
     const results = decode(frame,config)
     if (results) {
       onBarcodeScannedJS(results);
