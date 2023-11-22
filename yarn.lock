@@ -6657,10 +6657,10 @@ vary@~1.1.2:
   resolved "https://registry.npmmirror.com/vary/-/vary-1.1.2.tgz"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
 
-vision-camera-dynamsoft-barcode-reader@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/vision-camera-dynamsoft-barcode-reader/-/vision-camera-dynamsoft-barcode-reader-1.0.2.tgz"
-  integrity sha512-K+4tMZ3V/y7lp8BeOMhPdZwvfYmo/j1IS7bCONTHin0wLSxHXqaXXlC5JzhQRfDy1nhM9mitkEKqvDWh4e9E7Q==
+vision-camera-dynamsoft-barcode-reader@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.npmjs.org/vision-camera-dynamsoft-barcode-reader/-/vision-camera-dynamsoft-barcode-reader-1.0.3.tgz"
+  integrity sha512-WMOlkfgHatKaSLh3SCVsP04Ctpmj7OiwYUvW6zoOodPs/XeSWp1sX0OC/GX1Qf6KE8xvHtgcUMc00VR9DWHIeA==
 
 vlq@^1.0.0:
   version "1.0.1"
