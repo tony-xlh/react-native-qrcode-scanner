@@ -11,6 +11,7 @@ import { useSharedValue, Worklets } from 'react-native-worklets-core';
 let pressedResult:TextResult|undefined;
 
 export default function BarcodeScanner({ route, navigation }) {
+  const mounted = useSharedValue(false);
   const regionEnabledShared = useSharedValue(false);
   const continuous = route.params.continuous;
   const [hasPermission, setHasPermission] = React.useState(false);
@@ -47,8 +48,11 @@ export default function BarcodeScanner({ route, navigation }) {
       "hardwareBackPress",
       backAction
     );
-
-    return () => backHandler.remove();
+    mounted.value = true;
+    return () => {
+      backHandler.remove();
+      mounted.value = false;
+    }
   }, []);
 
 
@@ -125,47 +129,49 @@ export default function BarcodeScanner({ route, navigation }) {
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
-    console.log("height: "+frame.height);
-    console.log("width: "+frame.width);
-    updateFrameSizeJS(frame.width, frame.height);
-    const config:DBRConfig = {};
-    config.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-    config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
-    config.rotateImage = false;
-    if (regionEnabledShared.value){
-      let settings;
-      if (config.template){
-        settings = JSON.parse(config.template);
-      }else{
-        const template = 
-        `{
-          "ImageParameter": {
-            "Name": "Settings"
-          },
-          "Version": "3.0"
-        }`;
-        settings = JSON.parse(template);
-      }
-      settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
-      settings["RegionDefinition"] = {
-                                      "Left": 10,
-                                      "Right": 90,
-                                      "Top": 20,
-                                      "Bottom": 65,
-                                      "MeasuredByPercentage": 1,
-                                      "Name": "Settings",
-                                    };
-      settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
-        {
-          "Name":"Barcode",
-          "BarcodeFormatIds":"BF_QR_CODE"
+    if (mounted.value) {
+      console.log("height: "+frame.height);
+      console.log("width: "+frame.width);
+      updateFrameSizeJS(frame.width, frame.height);
+      const config:DBRConfig = {};
+      config.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+      config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
+      config.rotateImage = false;
+      if (regionEnabledShared.value){
+        let settings;
+        if (config.template){
+          settings = JSON.parse(config.template);
+        }else{
+          const template = 
+          `{
+            "ImageParameter": {
+              "Name": "Settings"
+            },
+            "Version": "3.0"
+          }`;
+          settings = JSON.parse(template);
         }
-      ]
-      config.template = JSON.stringify(settings);
-    }
-    const results = decode(frame,config)
-    if (results) {
-      onBarcodeScannedJS(results);
+        settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
+        settings["RegionDefinition"] = {
+                                        "Left": 10,
+                                        "Right": 90,
+                                        "Top": 20,
+                                        "Bottom": 65,
+                                        "MeasuredByPercentage": 1,
+                                        "Name": "Settings",
+                                      };
+        settings["RegionDefinition"]["FormatSpecificationNameArray"] = [
+          {
+            "Name":"Barcode",
+            "BarcodeFormatIds":"BF_QR_CODE"
+          }
+        ]
+        config.template = JSON.stringify(settings);
+      }
+      const results = decode(frame,config)
+      if (results) {
+        onBarcodeScannedJS(results);
+      }
     }
   }, [])
   
