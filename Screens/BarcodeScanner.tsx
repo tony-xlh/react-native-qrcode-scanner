@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch, BackHandler } from 'react-native';
-import { Camera, CameraDevice, getCameraFormat, useCameraDevice, useCameraDevices, useCameraFormat, useFrameProcessor } from 'react-native-vision-camera';
+import { Camera, CameraDevice, getCameraFormat, runAsync, runAtTargetFps, useCameraDevice, useCameraDevices, useCameraFormat, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
@@ -129,55 +129,58 @@ export default function BarcodeScanner({ route, navigation }) {
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
-    if (mounted.value) {
-      console.log("height: "+frame.height);
-      console.log("width: "+frame.width);
-      updateFrameSizeJS(frame.width, frame.height);
-      const config:DBRConfig = {};
-      config.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-      config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
-      config.rotateImage = false;
-      if (regionEnabledShared.value){
-        let settings;
-        if (config.template){
-          settings = JSON.parse(config.template);
-        }else{
-          const template = 
-          `{
-            "ImageParameter": {
-              "Name": "Settings"
-            },
-            "Version": "3.0"
-          }`;
-          settings = JSON.parse(template);
+    runAtTargetFps(5, () => {
+      'worklet'
+      if (mounted.value) {
+        console.log("height: "+frame.height);
+        console.log("width: "+frame.width);
+        updateFrameSizeJS(frame.width, frame.height);
+        const config:DBRConfig = {};
+        config.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        //config.template="{\"ImageParameter\":{\"BarcodeFormatIds\":[\"BF_QR_CODE\"],\"Description\":\"\",\"Name\":\"Settings\"},\"Version\":\"3.0\"}";
+        config.rotateImage = false;
+        if (regionEnabledShared.value){
+          let settings;
+          if (config.template){
+            settings = JSON.parse(config.template);
+          }else{
+            const template = 
+            `{
+              "ImageParameter": {
+                "Name": "Settings"
+              },
+              "Version": "3.0"
+            }`;
+            settings = JSON.parse(template);
+          }
+          let left = 10;
+          let right = 90;
+          let top = 20;
+          let bottom = 65;
+          if (config.rotateImage == false && Platform.OS === 'android') {
+            console.log("android with rotation disabled");
+            left = 20;
+            right = 65;
+            top = 10;
+            bottom = 90;
+          }
+          settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
+          settings["RegionDefinition"] = {
+                                          "Left": left,
+                                          "Right": right,
+                                          "Top": top,
+                                          "Bottom": bottom,
+                                          "MeasuredByPercentage": 1,
+                                          "Name": "Settings",
+                                        };
+          config.template = JSON.stringify(settings);
         }
-        let left = 10;
-        let right = 90;
-        let top = 20;
-        let bottom = 65;
-        if (config.rotateImage == false && Platform.OS === 'android') {
-          console.log("android with rotation disabled");
-          left = 20;
-          right = 65;
-          top = 10;
-          bottom = 90;
+        const results = decode(frame,config)
+        if (results) {
+          onBarcodeScannedJS(results);
         }
-        settings["ImageParameter"]["RegionDefinitionNameArray"] = ["Settings"];
-        settings["RegionDefinition"] = {
-                                        "Left": left,
-                                        "Right": right,
-                                        "Top": top,
-                                        "Bottom": bottom,
-                                        "MeasuredByPercentage": 1,
-                                        "Name": "Settings",
-                                      };
-        config.template = JSON.stringify(settings);
       }
-      const results = decode(frame,config)
-      if (results) {
-        onBarcodeScannedJS(results);
-      }
-    }
+    })
   }, [])
   
   return (
