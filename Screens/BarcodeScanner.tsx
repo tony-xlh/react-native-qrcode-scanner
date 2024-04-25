@@ -117,7 +117,7 @@ export default function BarcodeScanner({ route, navigation }) {
     setFrameHeight(height);
   }
 
-  const updateFrameSizeJS = Worklets.createRunInJsFn(updateFrameSize);
+  const updateFrameSizeJS = Worklets.createRunOnJS(updateFrameSize);
   const onBarcodeScanned = (results:TextResult[]) =>{
     console.log("onBarcodeScanned");
     setBarcodeResults(results);
@@ -125,7 +125,7 @@ export default function BarcodeScanner({ route, navigation }) {
       onBarCodeDetected(results);
     }
   }
-  const onBarcodeScannedJS = Worklets.createRunInJsFn(onBarcodeScanned);
+  const onBarcodeScannedJS = Worklets.createRunOnJS(onBarcodeScanned);
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
