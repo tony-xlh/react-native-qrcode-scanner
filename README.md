@@ -1,10 +1,6 @@
-# react-native-barcode-overlays
+# react-native-qrcode-scanner
 
-A React Native demo app for Barcode Overlays which can work as a QR code scanner.
-
-It works with Vision Camera v3.
-
-Check out the v2 branch for the example for Vision Camera v2.
+A React Native QR Code Scanner demo using Vision Camera and the [Dynamsoft Barcode Reader plugin](https://github.com/tony-xlh/vision-camera-dynamsoft-barcode-reader).
 
 ## How to run
 
@@ -13,3 +9,8 @@ Check out the v2 branch for the example for Vision Camera v2.
 3. npx react-native run-android or run-ios
 
 ![](qr-code-scanner.jpg)
+
+## Blog
+
+[Build a React Native QR Code Scanner using Vision Camera](https://www.dynamsoft.com/codepool/react-native-qr-code-scanner-vision-camera.html)
+
