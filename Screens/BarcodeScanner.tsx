@@ -1,11 +1,10 @@
 import * as React from 'react';
-import { Text, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Platform, Alert, Switch, BackHandler } from 'react-native';
+import { Text, Clipboard, Linking, Dimensions, SafeAreaView, TouchableOpacity, StyleSheet, View, Alert, Switch, BackHandler } from 'react-native';
 import { Camera, CameraDevice, getCameraFormat, runAsync, runAtTargetFps, useCameraDevice, useCameraDevices, useCameraFormat, useFrameProcessor } from 'react-native-vision-camera';
 import { DBRConfig, decode, TextResult } from 'vision-camera-dynamsoft-barcode-reader';
 
 import { Polygon, Text as SVGText, Svg, Rect } from 'react-native-svg';
 import ActionSheet from '@alessiocancian/react-native-actionsheet';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { useSharedValue, Worklets } from 'react-native-worklets-core';
 
 let pressedResult:TextResult|undefined;
@@ -96,18 +95,13 @@ export default function BarcodeScanner({ route, navigation }) {
 
   const getFrameSize = () => {
     let width, height;
-    if (Platform.OS === 'android') {
-      if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
-        width = frameWidth;
-        height = frameHeight;
-      }else {
-        console.log("Has rotation");
-        width = frameHeight;
-        height = frameWidth;
-      }
-    } else {
+    if (frameWidth>frameHeight && Dimensions.get('window').width>Dimensions.get('window').height){
       width = frameWidth;
       height = frameHeight;
+    }else {
+      console.log("Has rotation");
+      width = frameHeight;
+      height = frameWidth;
     }
     return [width, height];
   }
@@ -118,11 +112,16 @@ export default function BarcodeScanner({ route, navigation }) {
   }
 
   const updateFrameSizeJS = Worklets.createRunOnJS(updateFrameSize);
-  const onBarcodeScanned = (results:TextResult[]) =>{
+  const onBarcodeScanned = (results:Record<string,TextResult>) =>{
     console.log("onBarcodeScanned");
-    setBarcodeResults(results);
-    if (results.length>0) {
-      onBarCodeDetected(results);
+    let converted = [];
+    for (let index = 0; index < Object.keys(results).length; index++) {
+      const result = results[Object.keys(results)[index]];
+      converted.push(result);
+    }
+    setBarcodeResults(converted);
+    if (converted.length>0) {
+      onBarCodeDetected(converted);
     }
   }
   const onBarcodeScannedJS = Worklets.createRunOnJS(onBarcodeScanned);
@@ -157,8 +156,8 @@ export default function BarcodeScanner({ route, navigation }) {
           let right = 90;
           let top = 20;
           let bottom = 65;
-          if (config.rotateImage == false && Platform.OS === 'android') {
-            console.log("android with rotation disabled");
+          if (config.rotateImage == false) {
+            console.log("rotation disabled");
             left = 20;
             right = 65;
             top = 10;
@@ -195,6 +194,7 @@ export default function BarcodeScanner({ route, navigation }) {
             torch={torchEnabled ? "on" : "off"}
             format={cameraFormat}
             pixelFormat="yuv"
+            resizeMode='contain'
             frameProcessor={frameProcessor}
             />
         </>)}

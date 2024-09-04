@@ -7,11 +7,11 @@
 #define TIMEOUT_SECONDS 600
 #define TEXT_TO_LOOK_FOR @"Welcome to React"
 
-@interface BarcodeOverlaysTests : XCTestCase
+@interface QRCodeScannerTests : XCTestCase
 
 @end
 
-@implementation BarcodeOverlaysTests
+@implementation QRCodeScannerTests
 
 - (BOOL)findSubviewInView:(UIView *)view matching:(BOOL (^)(UIView *view))test
 {
